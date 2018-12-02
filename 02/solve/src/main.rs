@@ -1,9 +1,11 @@
+// Comments lack context; see puzzle text for more info.
+
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::io;
 
 // Returns (num_2, num_3, num_2 * num_3).
-// See https://stackoverflow.com/a/41180422/744071.
-// fn solve_part1(ids: &Vec<String>) -> (i32, i32, i32) {
+// For the function type, see https://stackoverflow.com/a/41180422/744071.
 fn solve_part1<T: AsRef<str>>(ids: &[T]) -> (i32, i32, i32) {
     let mut num_repeats_to_count : HashMap<i32, i32> = HashMap::new();
     for id in ids {
@@ -33,6 +35,35 @@ fn test_part1() {
         (4, 3, 12));
 }
 
+// Returns the common substring. O(num_strings * string_length^2).
+// Did not spend any time looking for a more efficient solution.
+fn solve_part2<T: AsRef<str>>(ids: &[T]) -> Option<String> {
+    if ids.is_empty() {
+        return None;
+    }
+    let id_len = ids[0].as_ref().len();
+    for index_to_drop in 0..id_len {
+        let mut seen: HashSet<String> = HashSet::new();
+        for id_thingy in ids {
+            let id = id_thingy.as_ref();
+            assert!(id.len() == id_len);
+            let mod_id = id[..index_to_drop].to_string() + &id[index_to_drop + 1..];
+            if seen.contains(&mod_id) {
+                return Some(mod_id);
+            }
+            seen.insert(mod_id);
+        }
+    }
+    None
+}
+
+#[test]
+fn test_part2() {
+    assert_eq!(
+        solve_part2(&vec!["abcde", "fghij", "klmno", "pqrst", "fguij", "axcye", "wvxyz"]),
+        Some("fgij".to_string()));
+}
+
 fn main() {
     let mut ids: Vec<String> = Vec::new();
     let mut line = String::new();
@@ -46,4 +77,5 @@ fn main() {
         ids.push(line.trim().to_string());
     }
     println!("part 1: {:?}", solve_part1(&ids));
+    println!("part 2: {:?}", solve_part2(&ids));
 }
