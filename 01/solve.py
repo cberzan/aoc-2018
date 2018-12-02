@@ -68,6 +68,7 @@ def solve_part2(numbers):
     As above, but using a fancy O(n log n) solution.
     """
     seq_sum = sum(numbers)
+    # print "seq_sum:", seq_sum
 
     # Case 1: We have k = 0. Get the solution in O(n).
     if seq_sum == 0:
@@ -95,6 +96,7 @@ def solve_part2(numbers):
         best_soln = None
         for mod, indices in mod_to_indices.iteritems():
             indices.sort(key=lambda i: cumsums[i] / seq_sum)
+            # print mod, indices
             for t in xrange(1, len(indices)):
                 j = indices[t - 1]
                 i = indices[t]
@@ -103,8 +105,10 @@ def solve_part2(numbers):
                 assert div_j <= div_i
                 k = div_i - div_j
                 soln = (cumsums[i], i, j, k)
+                # print "candidate:", soln
                 if soln_less_than(soln, best_soln):
                     best_soln = soln
+        # print "final:", best_soln
         return best_soln
 
 
