@@ -9,10 +9,18 @@ fn solve_part1(numbers: &Vec<i32>) -> i32 {
     sum
 }
 
+#[test]
+fn test_part1() {
+    assert_eq!(solve_part1(&vec![1, 1, 1]), 3);
+    assert_eq!(solve_part1(&vec![1, 1, -2]), 0);
+    assert_eq!(solve_part1(&vec![-1, -2, -3]), -6);
+}
+
 // Represents a solution. Interpretation:
 //      value == sum(numbers[:i-1])
 //            == sum(numbers[:j-1]) + k * sum(numbers).
 #[derive(Debug)]
+#[derive(PartialEq)]
 struct Solution {
     value: i32,
     i: i32,
@@ -120,13 +128,19 @@ fn solve_part2_fast(numbers: &Vec<i32>) -> Option<Solution> {
         // zero... So these work completely differently for negative numbers.
         let modulo = (sum % total + total) % total;
         let multiple = (sum as f64 / total as f64).floor() as i32;
-        assert!(modulo >= 0 && modulo < total);
+        // println!("sum={} total={} multiple={} modulo={} sum_back={}",
+        //    sum, total, multiple, modulo, multiple * total + modulo);
+        if total > 0 {
+            assert!(modulo >= 0 && modulo < total);
+        } else {
+            assert!(modulo <= 0 && modulo > total);
+        }
         assert!(multiple * total + modulo == sum);
         if !mod_to_index_infos.contains_key(&modulo) {
             mod_to_index_infos.insert(modulo, empty_index_infos.clone());
         }
         let index_infos = mod_to_index_infos.get_mut(&modulo).unwrap();
-        index_infos.push(IndexInfo{index: j as i32, multiple: sum / total, modulo: modulo});
+        index_infos.push(IndexInfo{index: j as i32, multiple, modulo});
     }
     // If i and j form a solution, they must be in the same modulo group.
     let mut best_soln: Option<Solution> = None;
@@ -151,6 +165,23 @@ fn solve_part2_fast(numbers: &Vec<i32>) -> Option<Solution> {
         }
     }
     best_soln
+}
+
+#[cfg(test)]
+fn check_part2(numbers: &Vec<i32>, solution: &Option<Solution>) {
+    assert_eq!(solve_part2_naive(numbers), *solution);
+    assert_eq!(solve_part2_fast(numbers), *solution);
+}
+
+#[test]
+fn test_part2() {
+    check_part2(&vec![1, -1], &Some(Solution{value: 0, i: -1, j: 1, k: 0}));
+    check_part2(&vec![3, 3, 4, -2, -4], &Some(Solution{value: 10, i: 2, j: 1, k: 1}));
+    check_part2(&vec![-3, -3, -4, 2, 4], &Some(Solution{value: -10, i: 2, j: 1, k: 1}));
+    check_part2(&vec![-6, 3, 8, 5, -6], &Some(Solution{value: 5, i: 2, j: 1, k: 2}));
+    check_part2(&vec![7, 7, -2, -7, -4], &Some(Solution{value: 14, i: 1, j: 2, k: 2}));
+    check_part2(&vec![50, 50, -99], &Some(Solution{value: 50, i: 0, j: 2, k: 49}));
+    check_part2(&vec![2, 2, 2, 7, -3], &None);
 }
 
 fn main() {
