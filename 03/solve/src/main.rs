@@ -2,6 +2,7 @@
 extern crate regex;
 
 use regex::Regex;
+use std::collections::HashSet;
 use std::io;
 
 #[derive(Debug)]
@@ -88,6 +89,48 @@ fn test_part1() {
     assert_eq!(solve_part1_naive(&claims), 4);
 }
 
+// Dumb simulation-based solution. Returns ids of conflictless claims.
+fn solve_part2_naive(claims: &Vec<Claim>) -> Vec<i32> {
+    // Keep track of which claims are conflictless thus far.
+    let mut conflictless_claims: HashSet<i32> = HashSet::new();
+
+    // Paint the claims on the canvas. Each cell holds the id of the most recent claim on that
+    // cell. This tells us which claim id to remove from conflictless_claims if we later see a
+    // conflict for that cell.
+    let canvas_num_rows = claims.iter().map(|c| c.start_row + c.num_rows).max().unwrap() as usize + 1;
+    let canvas_num_cols = claims.iter().map(|c| c.start_col + c.num_cols).max().unwrap() as usize + 1;
+    let mut canvas: Vec<i32> = Vec::new();  // row-major indexing
+    canvas.resize(canvas_num_rows * canvas_num_cols, 0);
+    for claim in claims {
+        let mut has_conflicts = false;
+        for r in 0..claim.num_rows {
+            for c in 0..claim.num_cols {
+                let index = (claim.start_row + r) * canvas_num_cols + (claim.start_col + c);
+                if canvas[index] != 0 {
+                    conflictless_claims.remove(&canvas[index]);
+                    has_conflicts = true;
+                }
+                canvas[index] = claim.id;
+            }
+        }
+        if !has_conflicts {
+            conflictless_claims.insert(claim.id);
+        }
+    }
+
+    conflictless_claims.iter().map(|&id| id).collect()
+}
+
+#[test]
+fn test_part2() {
+    let claims = vec![
+        parse_claim("#1 @ 1,3: 4x4").unwrap(),
+        parse_claim("#2 @ 3,1: 4x4").unwrap(),
+        parse_claim("#3 @ 5,5: 2x2").unwrap()];
+    assert_eq!(solve_part2_naive(&claims), vec![3]);
+}
+
+
 fn main() {
     let mut claims: Vec<Claim> = Vec::new();
     let mut line = String::new();
@@ -101,5 +144,5 @@ fn main() {
         claims.push(parse_claim(line.trim()).unwrap());
     }
     println!("part 1: {:?}", solve_part1_naive(&claims));
-    // println!("part 2: {:?}", solve_part2(&ids));
+    println!("part 2: {:?}", solve_part2_naive(&claims));
 }
