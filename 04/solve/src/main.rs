@@ -74,16 +74,14 @@ fn test_parse_log_line() {
                             guard_id: None, action: Action::WakesUp}));
 }
 
-// Returns (guard_id, minute, guard_id * minute).
-fn solve_part1(log_lines: &Vec<LogLine>) -> (i32, i32, i32) {
-    let mut guard_id_to_minutes_asleep : HashMap<i32, i32> = HashMap::new();
-    let mut guard_id_to_minute_to_days_asleep :
-        HashMap<i32, HashMap<i32, i32>> = HashMap::new();
+// Returns a map of (guard_id, minute) to num_days_asleep.
+fn get_sleep_stats(log_lines: &Vec<LogLine>) -> HashMap<(i32, i32), i32> {
+    let mut result : HashMap<(i32, i32), i32> = HashMap::new();
     let mut current_guard_id = None;
     let mut asleep_since_minute = None;
     for log_line in log_lines {
-        println!("state: {:?} {:?} log_line: {:?}",
-            current_guard_id, asleep_since_minute, log_line);
+        // println!("state: {:?} {:?} log_line: {:?}",
+        //     current_guard_id, asleep_since_minute, log_line);
         match log_line.action {
             Action::FallsAsleep => {
                 assert!(asleep_since_minute == None);  // inception-style sleep
@@ -92,13 +90,8 @@ fn solve_part1(log_lines: &Vec<LogLine>) -> (i32, i32, i32) {
             Action::WakesUp => {
                 assert!(current_guard_id != None);
                 assert!(asleep_since_minute != None);
-                *(guard_id_to_minutes_asleep.entry(
-                    current_guard_id.unwrap()).or_insert(0)) += 
-                        log_line.minute - asleep_since_minute.unwrap();
-                let minute_to_days_asleep = guard_id_to_minute_to_days_asleep.entry(
-                    current_guard_id.unwrap()).or_insert(HashMap::new());
                 for minute in asleep_since_minute.unwrap()..log_line.minute {
-                    *(minute_to_days_asleep.entry(minute).or_insert(0)) += 1;
+                    *(result.entry((current_guard_id.unwrap(), minute)).or_insert(0)) += 1;
                 }
                 asleep_since_minute = None;
             },
@@ -108,15 +101,33 @@ fn solve_part1(log_lines: &Vec<LogLine>) -> (i32, i32, i32) {
             },
         }
     }
+    result
+}
+
+// Returns (guard_id, minute, guard_id * minute).
+fn solve_part1(log_lines: &Vec<LogLine>) -> (i32, i32, i32) {
+    let stats = get_sleep_stats(log_lines);
+    let mut guard_id_to_minutes_asleep: HashMap<i32, i32> = HashMap::new();
+    for ((guard_id, _minute), num_days_asleep) in stats.iter() {
+        *(guard_id_to_minutes_asleep.entry(*guard_id).or_insert(0)) += num_days_asleep;
+    }
     let chosen_guard_id = *(guard_id_to_minutes_asleep.iter()
             .max_by_key(|e| e.1).unwrap().0);
-    let chosen_minute = *(guard_id_to_minute_to_days_asleep[&chosen_guard_id].iter()
+
+    let mut minute_to_days_asleep : HashMap<i32, i32> = HashMap::new();
+    for ((guard_id, minute), num_days_asleep) in stats.iter() {
+        if *guard_id == chosen_guard_id {
+            *(minute_to_days_asleep.entry(*minute).or_insert(0)) += num_days_asleep;
+        }
+    }
+    let chosen_minute = *(minute_to_days_asleep.iter()
             .max_by_key(|e| e.1).unwrap().0);
+
     (chosen_guard_id, chosen_minute, chosen_guard_id * chosen_minute)
 }
 
-#[test]
-fn test_solve_part1() {
+#[cfg(test)]
+fn get_test_log_lines() -> Vec<LogLine> {
     let lines = r"[1518-11-01 00:00] Guard #10 begins shift
                   [1518-11-01 00:05] falls asleep
                   [1518-11-01 00:25] wakes up
@@ -134,10 +145,29 @@ fn test_solve_part1() {
                   [1518-11-05 00:03] Guard #99 begins shift
                   [1518-11-05 00:45] falls asleep
                   [1518-11-05 00:55] wakes up";
-    let log_lines = lines.split('\n')
+    lines.split('\n')
         .map(|line| parse_log_line(line.trim()).unwrap())
-        .collect();
+        .collect()
+}
+
+#[test]
+fn test_solve_part1() {
+    let log_lines = get_test_log_lines();
     assert_eq!(solve_part1(&log_lines), (10, 24, 240));
+}
+
+// Returns (guard_id, minute, guard_id * minute).
+fn solve_part2(log_lines: &Vec<LogLine>) -> (i32, i32, i32) {
+    let stats = get_sleep_stats(log_lines);
+    let (chosen_guard_id, chosen_minute) = *(stats.iter()
+            .max_by_key(|e| e.1).unwrap().0);
+    (chosen_guard_id, chosen_minute, chosen_guard_id * chosen_minute)
+}
+
+#[test]
+fn test_solve_part2() {
+    let log_lines = get_test_log_lines();
+    assert_eq!(solve_part2(&log_lines), (99, 45, 4455));
 }
 
 fn main() {
@@ -167,5 +197,5 @@ fn main() {
     }
 
     println!("part 1: {:?}", solve_part1(&log_lines));
-    // println!("part 2: {:?}", solve_part2(&log_lines));
+    println!("part 2: {:?}", solve_part2(&log_lines));
 }
